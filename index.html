@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Related Rates Lighthouse Applet</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #30323a;
+      --muted: #646a76;
+      --panel: #e8edf7;
+      --line: #5f74ad;
+      --blue: #24458f;
+      --coast: #4b4e57;
+      --beam: rgba(255, 188, 96, 0.32);
+      --beam-core: rgba(255, 188, 96, 0.82);
+      --water: #d9f0f7;
+      --land: #f7f0da;
+      --accent: #7b45ad;
+      --answer: #1f746b;
+      --paper: #ffffff;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+      background: #f4f6f9;
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      padding: 12px;
+    }
+
+    .applet {
+      width: min(1220px, 100%);
+      min-height: min(790px, calc(100vh - 24px));
+      display: grid;
+      grid-template-columns: minmax(520px, 1.08fr) minmax(390px, 0.92fr);
+      border: 2px solid #888d95;
+      background: var(--paper);
+      overflow: hidden;
+      box-shadow: 0 18px 44px rgba(35, 42, 60, 0.14);
+    }
+
+    .visual {
+      display: grid;
+      grid-template-rows: auto minmax(460px, 1fr) auto;
+      background: #fff;
+    }
+
+    .problem {
+      padding: clamp(18px, 2.5vw, 30px);
+      border-bottom: 4px solid var(--line);
+      font: 700 clamp(1.15rem, 2vw, 1.85rem) Georgia, "Times New Roman", serif;
+      line-height: 1.35;
+    }
+
+    .canvas-wrap {
+      min-height: 460px;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 460px;
+    }
+
+    .controls {
+      display: grid;
+      gap: 12px;
+      padding: 22px 30px;
+      border-top: 4px solid var(--line);
+      background: var(--panel);
+    }
+
+    label {
+      font-weight: 700;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    button {
+      width: fit-content;
+      min-height: 40px;
+      padding: 8px 14px;
+      border: 2px solid var(--blue);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--blue);
+      font: 700 0.95rem Arial, Helvetica, sans-serif;
+      cursor: pointer;
+    }
+
+    button.primary {
+      background: var(--blue);
+      color: #fff;
+    }
+
+    .side {
+      display: grid;
+      align-content: start;
+      gap: 16px;
+      padding: clamp(22px, 3vw, 38px);
+      background: var(--panel);
+      border-left: 4px solid var(--line);
+    }
+
+    h1,
+    h2,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font: 700 clamp(1.35rem, 2.3vw, 2.05rem) Georgia, "Times New Roman", serif;
+    }
+
+    h2 {
+      font: 700 clamp(1.02rem, 1.6vw, 1.25rem) Georgia, "Times New Roman", serif;
+    }
+
+    .card {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border: 1px solid #c7d0e2;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.76);
+    }
+
+    .math {
+      font-family: Georgia, "Times New Roman", serif;
+      font-style: italic;
+      font-size: clamp(1.12rem, 1.85vw, 1.42rem);
+      line-height: 1.35;
+    }
+
+    .frac {
+      display: inline-grid;
+      grid-template-rows: auto auto;
+      align-items: center;
+      justify-items: center;
+      vertical-align: middle;
+      line-height: 1;
+      font-style: normal;
+    }
+
+    .frac .top-frac {
+      width: 100%;
+      padding: 0 7px 4px;
+      border-bottom: 2px solid currentColor;
+      text-align: center;
+    }
+
+    .frac .bottom-frac {
+      padding: 4px 7px 0;
+      text-align: center;
+    }
+
+    .values {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .value {
+      padding: 10px;
+      border: 1px solid #d7dce8;
+      border-radius: 7px;
+      background: #fff;
+    }
+
+    .value strong {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .answer {
+      padding: 14px;
+      border-left: 5px solid var(--answer);
+      background: #fff;
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    .answer.off-target {
+      border-left-color: var(--accent);
+    }
+
+    .muted {
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 0.98rem;
+    }
+
+    @media (max-width: 900px) {
+      body { padding: 8px; }
+      .applet { grid-template-columns: 1fr; }
+      .side {
+        border-left: 0;
+        border-top: 4px solid var(--line);
+      }
+    }
+
+    @media (max-width: 560px) {
+      .values { grid-template-columns: 1fr; }
+      .problem,
+      .controls,
+      .side { padding: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="applet" aria-label="Related rates lighthouse applet">
+    <section class="visual">
+      <div class="problem">
+        A lighthouse is 250 m off the coast. Its light rotates at 2 revolutions per minute.
+        How fast does the light beam pass a point on the coastline 40 m from the point directly opposite the lighthouse?
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="diagram"></canvas>
+      </div>
+      <section class="controls">
+        <label for="distanceSlider">Distance along coastline x: <span id="distanceLabel">0 m</span></label>
+        <input id="distanceSlider" type="range" min="0" max="220" step="1" value="0">
+        <div class="button-row">
+          <button class="primary" id="targetBtn" type="button">Set x = 40 m</button>
+          <button id="animateBtn" type="button">Animate rotating light</button>
+        </div>
+      </section>
+    </section>
+
+    <aside class="side">
+      <h1>Related Rates: Lighthouse Beam</h1>
+
+      <section class="card">
+        <h2>Geometry</h2>
+        <div class="math">tan θ = <span class="frac"><span class="top-frac">x</span><span class="bottom-frac">250</span></span></div>
+        <div class="math">x = 250 tan θ</div>
+      </section>
+
+      <section class="card">
+        <h2>Angular speed</h2>
+        <div class="math"><span class="frac"><span class="top-frac">dθ</span><span class="bottom-frac">dt</span></span> = 2 rev/min = <span class="frac"><span class="top-frac">π</span><span class="bottom-frac">15</span></span> rad/s</div>
+      </section>
+
+      <section class="card">
+        <h2>Differentiate with respect to time</h2>
+        <div class="math"><span class="frac"><span class="top-frac">dx</span><span class="bottom-frac">dt</span></span> = 250 sec²θ <span class="frac"><span class="top-frac">dθ</span><span class="bottom-frac">dt</span></span></div>
+        <div class="math">sec²θ = 1 + tan²θ = 1 + (<span class="frac"><span class="top-frac">x</span><span class="bottom-frac">250</span></span>)²</div>
+      </section>
+
+      <section class="values">
+        <div class="value">
+          <strong>x</strong>
+          <span id="xValue">0 m</span>
+        </div>
+        <div class="value">
+          <strong>θ</strong>
+          <span id="thetaValue">0.1587 rad</span>
+        </div>
+        <div class="value">
+          <strong>dθ/dt</strong>
+          <span>π/15 rad/s</span>
+        </div>
+        <div class="value">
+          <strong>dx/dt</strong>
+          <span id="rateValue">52.4 m/s</span>
+        </div>
+      </section>
+
+      <div class="answer" id="answerBox">
+        At x = 0 m, <span class="math"><span class="frac"><span class="top-frac">dx</span><span class="bottom-frac">dt</span></span> ≈ 52.4</span> m/s. Move to x = 40 m for the asked value.
+      </div>
+
+      <p class="muted">The beam sweeps faster along the coastline as the point moves farther from the point directly opposite the lighthouse.</p>
+    </aside>
+  </main>
+
+  <script>
+    const canvas = document.querySelector("#diagram");
+    const ctx = canvas.getContext("2d");
+    const distanceSlider = document.querySelector("#distanceSlider");
+    const distanceLabel = document.querySelector("#distanceLabel");
+    const xValue = document.querySelector("#xValue");
+    const thetaValue = document.querySelector("#thetaValue");
+    const rateValue = document.querySelector("#rateValue");
+    const answerBox = document.querySelector("#answerBox");
+    const targetBtn = document.querySelector("#targetBtn");
+    const animateBtn = document.querySelector("#animateBtn");
+
+    const model = {
+      coastDistance: 250,
+      thetaRate: Math.PI / 15
+    };
+
+    const state = {
+      x: 0,
+      width: 0,
+      height: 0,
+      dpr: 1,
+      animating: false,
+      animationId: 0,
+      theta: 0
+    };
+
+    function cssVar(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    function fracHtml(top, bottom) {
+      return `<span class="frac"><span class="top-frac">${top}</span><span class="bottom-frac">${bottom}</span></span>`;
+    }
+
+    function thetaForX(x) {
+      return Math.atan(x / model.coastDistance);
+    }
+
+    function rateForX(x) {
+      return model.coastDistance * (1 + (x / model.coastDistance) ** 2) * model.thetaRate;
+    }
+
+    function xForTheta(theta) {
+      return model.coastDistance * Math.tan(theta);
+    }
+
+    function format(value, places = 2) {
+      return Number(value.toFixed(places)).toString();
+    }
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      state.dpr = window.devicePixelRatio || 1;
+      state.width = Math.max(430, Math.round(rect.width));
+      state.height = Math.max(440, Math.round(rect.height));
+      canvas.width = Math.round(state.width * state.dpr);
+      canvas.height = Math.round(state.height * state.dpr);
+      ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+      render();
+    }
+
+    function render() {
+      updateText();
+      draw();
+    }
+
+    function updateText() {
+      const theta = thetaForX(state.x);
+      const rate = rateForX(state.x);
+      distanceLabel.textContent = `${format(state.x, 0)} m`;
+      xValue.textContent = `${format(state.x, 0)} m`;
+      thetaValue.textContent = `${format(theta, 4)} rad`;
+      rateValue.textContent = `${format(rate, 1)} m/s`;
+
+      if (Math.abs(state.x - 40) < 0.5) {
+        answerBox.classList.remove("off-target");
+        answerBox.innerHTML = `At x = 40 m, <span class="math">${fracHtml("dx", "dt")} = 17.09π ≈ 53.7</span> m/s.`;
+      } else {
+        answerBox.classList.add("off-target");
+        answerBox.innerHTML = `At x = ${format(state.x, 0)} m, <span class="math">${fracHtml("dx", "dt")} ≈ ${format(rate, 1)}</span> m/s. Move to x = 40 m for the asked value.`;
+      }
+    }
+
+    function draw() {
+      const w = state.width;
+      const h = state.height;
+      ctx.clearRect(0, 0, w, h);
+
+      const coastY = h * 0.35;
+      const originX = w * 0.22;
+      const scale = Math.min((w * 0.64) / 250, (h * 0.44) / 250);
+      const lighthouseX = originX;
+      const lighthouseY = coastY + model.coastDistance * scale;
+      const targetX = originX + state.x * scale;
+      const targetY = coastY;
+
+      drawBackground(coastY);
+      drawBeam(lighthouseX, lighthouseY, targetX, targetY);
+      drawCoastline(originX, coastY, targetX, targetY, lighthouseX, lighthouseY, scale);
+      drawLighthouse(lighthouseX, lighthouseY);
+      drawTarget(targetX, targetY);
+      drawAngle(lighthouseX, lighthouseY, targetX, targetY);
+    }
+
+    function drawBackground(coastY) {
+      ctx.save();
+      ctx.fillStyle = cssVar("--land");
+      ctx.fillRect(0, 0, state.width, coastY);
+      ctx.fillStyle = cssVar("--water");
+      ctx.fillRect(0, coastY, state.width, state.height - coastY);
+      ctx.restore();
+    }
+
+    function drawBeam(lx, ly, tx, ty) {
+      ctx.save();
+      const angle = Math.atan2(ty - ly, tx - lx);
+      const length = Math.hypot(tx - lx, ty - ly);
+      ctx.translate(lx, ly);
+      ctx.rotate(angle);
+      const gradient = ctx.createLinearGradient(0, 0, length, 0);
+      gradient.addColorStop(0, "rgba(255, 204, 120, 0.72)");
+      gradient.addColorStop(0.65, "rgba(255, 204, 120, 0.28)");
+      gradient.addColorStop(1, "rgba(255, 204, 120, 0.62)");
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.moveTo(0, -8);
+      ctx.lineTo(length, -18);
+      ctx.lineTo(length, 18);
+      ctx.lineTo(0, 8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = cssVar("--beam-core");
+      ctx.lineWidth = 3;
+      drawLine(0, 0, length, 0);
+      ctx.restore();
+    }
+
+    function drawCoastline(originX, coastY, targetX, targetY, lighthouseX, lighthouseY, scale) {
+      ctx.save();
+      ctx.strokeStyle = cssVar("--coast");
+      ctx.fillStyle = cssVar("--coast");
+      ctx.lineWidth = 4;
+      drawLine(40, coastY, state.width - 42, coastY);
+
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash([8, 7]);
+      drawLine(originX, coastY, lighthouseX, lighthouseY);
+      ctx.setLineDash([]);
+
+      drawDoubleArrow(originX - 42, coastY, originX - 42, lighthouseY);
+      ctx.font = "700 24px Georgia, serif";
+      ctx.fillText("250 m", originX - 118, (coastY + lighthouseY) / 2 + 8);
+
+      drawDoubleArrow(originX, coastY - 42, targetX, coastY - 42);
+      ctx.fillText(`x = ${format(state.x, 0)} m`, (originX + targetX) / 2 - 42, coastY - 56);
+
+      ctx.strokeStyle = "#8b617b";
+      ctx.lineWidth = 2;
+      drawLine(originX, coastY + 18, originX + 18, coastY + 18);
+      drawLine(originX + 18, coastY + 18, originX + 18, coastY);
+
+      ctx.font = "700 18px Arial, Helvetica, sans-serif";
+      ctx.fillText("coastline", state.width - 124, coastY - 12);
+      ctx.restore();
+    }
+
+    function drawLighthouse(x, y) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.fillStyle = "#c13f69";
+      ctx.strokeStyle = "#7c2642";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-24, 0);
+      ctx.lineTo(24, 0);
+      ctx.lineTo(14, -88);
+      ctx.lineTo(-14, -88);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "#fff";
+      for (let i = 0; i < 4; i += 1) {
+        ctx.fillRect(-12, -18 - i * 18, 24, 7);
+      }
+
+      ctx.fillStyle = "#7c2642";
+      ctx.fillRect(-18, -98, 36, 10);
+      ctx.beginPath();
+      ctx.arc(0, -102, 15, Math.PI, 0);
+      ctx.fill();
+
+      ctx.fillStyle = "#ffd36b";
+      ctx.beginPath();
+      ctx.arc(0, -90, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawTarget(x, y) {
+      ctx.save();
+      ctx.fillStyle = cssVar("--accent");
+      ctx.strokeStyle = "#2b2535";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x, y, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.font = "700 18px Georgia, serif";
+      ctx.fillStyle = "#3f4148";
+      ctx.fillText("beam spot", x + 16, y - 16);
+      ctx.restore();
+    }
+
+    function drawAngle(lx, ly, tx, ty) {
+      const theta = Math.atan((tx - lx) / (ly - ty));
+      ctx.save();
+      ctx.strokeStyle = cssVar("--accent");
+      ctx.fillStyle = cssVar("--accent");
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(lx, ly, 48, -Math.PI / 2, -Math.PI / 2 + theta);
+      ctx.stroke();
+      ctx.font = "700 24px Georgia, serif";
+      ctx.fillText("θ", lx + 28, ly - 54);
+      ctx.restore();
+    }
+
+    function drawLine(x1, y1, x2, y2) {
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+
+    function drawDoubleArrow(x1, y1, x2, y2) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      drawArrowhead(x2, y2, Math.atan2(y2 - y1, x2 - x1));
+      drawArrowhead(x1, y1, Math.atan2(y1 - y2, x1 - x2));
+      ctx.restore();
+    }
+
+    function drawArrowhead(x, y, angle) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-12, -6);
+      ctx.lineTo(-12, 6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function setDistance(value) {
+      state.x = Math.max(0, Math.min(220, value));
+      state.theta = thetaForX(state.x);
+      distanceSlider.value = state.x.toFixed(0);
+      render();
+    }
+
+    function animate() {
+      if (!state.animating) return;
+      state.theta += (4 * Math.PI) * 0.0009;
+      if (state.theta > Math.atan(220 / 250)) state.theta = 0;
+      setDistance(xForTheta(state.theta));
+      state.animationId = requestAnimationFrame(animate);
+    }
+
+    distanceSlider.addEventListener("input", () => {
+      state.animating = false;
+      animateBtn.textContent = "Animate rotating light";
+      setDistance(Number(distanceSlider.value));
+    });
+
+    targetBtn.addEventListener("click", () => {
+      state.animating = false;
+      animateBtn.textContent = "Animate rotating light";
+      setDistance(40);
+    });
+
+    animateBtn.addEventListener("click", () => {
+      state.animating = !state.animating;
+      animateBtn.textContent = state.animating ? "Pause animation" : "Animate rotating light";
+      if (state.animating) {
+        cancelAnimationFrame(state.animationId);
+        state.theta = thetaForX(state.x);
+        animate();
+      }
+    });
+
+    window.addEventListener("resize", resize);
+    resize();
+  </script>
+</body>
+</html>
